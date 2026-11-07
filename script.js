@@ -23,21 +23,36 @@ const LEON_A=[
 const LEON_B=[
  [R('diag','dia',1,1),R('iso','cor',1),    R('diag','dia',0,1),R('iso','cor',2)],
  [R('cw','str',1),    R('iso','cor',1,1),  R('rot','rot',2),   R('diag','dia',0)],
- [R('diag','dia',1,1),R('blue','tee',0,3), R('olive','rot',1,1),R('iso','cor',3)],
+ [R('diag','dia',1,1),R('blue','tee',0,3), R('olive','str',1,1),R('iso','cor',3)],
  [R('rot','rot',2),   R('iso','cor',3,1),  R('diag','dia',1,1),R('cw','str',0)]];
+// Claire A (Claire's panel in the Police Chief's office): output terminal on the top row, solved in 7 presses.
+// Decoded from the "Seven Moves Only" guide screenshot: start wiring + press counts.
+const CLAIRE_A=[
+ [R('rot','rot',2),   R('rot','rot',2),    R('diag','dia',1,1),R('diag','dia',0)],
+ [R('diag','dia',0,1),R('diag','dia',1),   R('rot','rot',2),   R('rot','rot',2)],
+ [R('rot','rot',2),   R('rot','rot',2),    R('blue','tee',2,3),R('diag','dia',0,1)],
+ [R('diag','dia',0),  R('diag','dia',1,1), R('diag','dia',0),  R('diag','dia',0)]];
+// Claire B (Claire's 2nd run, Private Collection panel): output terminal on the bottom row, solved in 11 presses.
+// Solved wiring read from the solved screenshot, press counts from the "Claire B-Run" panel of the solutions image.
+const CLAIRE_B=[
+ [R('iso','cor',2),   R('diag','dia',0,1), R('diag','dia',1),   R('cw','str',1)],
+ [R('diag','dia',1,1),R('rot','rot',2),    R('blue','tee',1,3), R('diag','dia',1,1)],
+ [R('diag','dia',0),  R('rot','rot',2),    R('olive','str',0,1),R('iso','cor',3,2)],
+ [R('iso','cor',3),   R('diag','dia',1,1), R('rot','rot',2),    R('cw','str',0,1)]];
 const SCENARIOS={
   leonA:{name:'Leon A',grid:LEON_A,out:0},
   leonB:{name:'Leon B',grid:LEON_B,out:3},
-  claireA:{name:'Claire A',placeholder:true,grid:LEON_A,out:0},
-  claireB:{name:'Claire B',placeholder:true,grid:LEON_A,out:0}};
+  claireA:{name:'Claire A',grid:CLAIRE_A,out:0},
+  claireB:{name:'Claire B',grid:CLAIRE_B,out:3,v:3}};
 const M={N:[60,0],E:[120,60],S:[60,120],W:[0,60]};
 let L,st,OUT=0,cur=[0,0],moves=0;
 // ---- timer + best times ----
 let KEY='leonA',t0=0,raf=0,solved=false,finalMs=0;
 const mem={};
 const fmt=ms=>{const t=Math.floor(ms/10),cs=t%100,s=Math.floor(t/100)%60,m=Math.floor(t/6000);return `${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`};
-const getBest=k=>{try{const v=JSON.parse(localStorage.getItem('re2circuit.best.'+k));if(Array.isArray(v))return v}catch(e){}return mem[k]||[]};
-const setBest=(k,v)=>{mem[k]=v;try{localStorage.setItem('re2circuit.best.'+k,JSON.stringify(v))}catch(e){}};
+const bk=k=>'re2circuit.best.'+k+(SCENARIOS[k].v||'');
+const getBest=k=>{try{const v=JSON.parse(localStorage.getItem(bk(k)));if(Array.isArray(v))return v}catch(e){}return mem[bk(k)]||[]};
+const setBest=(k,v)=>{mem[bk(k)]=v;try{localStorage.setItem(bk(k),JSON.stringify(v))}catch(e){}};
 const tick=()=>{$('time').textContent=fmt(performance.now()-t0);raf=requestAnimationFrame(tick)};
 const startTimer=()=>{t0=performance.now();raf=requestAnimationFrame(tick)};
 const stopTimer=()=>{cancelAnimationFrame(raf);raf=0};
@@ -66,7 +81,7 @@ const pos=(r,c)=>K[L[r][c].k];
 const pathOf=([a,b])=>OPP[a]==b?`M${M[a]}L${M[b]}`:`M${M[a]}Q60,60 ${M[b]}`;
 const wire=(d,on)=>`<path class="w0" d="${d}"/><path class="w1 ${on?'on':''}" d="${d}"/><path class="w2" d="${d}"/>`;
 const lamp=(x,y,on)=>`<circle cx="${x}" cy="${y}" r="11" fill="${on?'#ffe27a':'#4a432c'}" stroke="#1d1a12" stroke-width="2" ${on?'filter="url(#glow)"':''}/>`;
- 
+
 function analyze(){
   const id=(r,c,p)=>(r*N+c)*4+'NESW'.indexOf(p),par=[...Array(N*N*4).keys()];
   const f=x=>par[x]==x?x:par[x]=f(par[x]),u=(a,b)=>{par[f(a)]=f(b)};
@@ -77,7 +92,7 @@ function analyze(){
   const a=f(id(0,0,'W')),b=f(id(3,0,'W')),o=f(id(OUT,3,'E'));
   return{f,id,lit:new Set([a,b]),win:a==b&&b==o,outLit:o==a||o==b};
 }
- 
+
 function tile(r,c,A){
   const {a,k}=L[r][c],s=st[r][c],x=OX+c*C,y=OY+r*C,sel=cur[0]==r&&cur[1]==c;
   let g=`<g class="tile${sel?' sel':''}" data-r="${r}" data-c="${c}" style="--x:${x}px;--y:${y}px" transform="translate(${x},${y})"><rect class="base" x="4" y="4" width="112" height="112" rx="9" fill="${FILL[a]}"/>${sel?'<rect x="4" y="4" width="112" height="112" rx="9" fill="#6fa8ff" opacity=".2"/>':''}`;
@@ -95,7 +110,7 @@ function tile(r,c,A){
   });
   return g+'</g>';
 }
- 
+
 function render(pop){
   const A=analyze();let h='';
   for(let r=0;r<N;r++)for(let c=0;c<N;c++)h+=tile(r,c,A);
@@ -141,7 +156,7 @@ function drawOutput(){
 function load(k){
   const S=SCENARIOS[k];
   KEY=k;L=S.grid;OUT=S.out||0;cur=[0,0];
-  $('sub').textContent=S.placeholder?S.name+': placeholder layout (copy of Leon A until the real board is added).':S.name+'. Connect both left terminals to the output.';
+  $('sub').textContent=S.placeholder?S.name+': placeholder layout (copy of Leon A until the real board is added).':S.name+'. Connect both left terminals to the output.'+(S.note?' '+S.note:'');
   $('tabs').innerHTML=Object.keys(SCENARIOS).map(id=>`<button data-k="${id}" class="${id==k?'on':''}">${SCENARIOS[id].name}</button>`).join('');
   drawOutput();
   reset();
@@ -150,4 +165,3 @@ $('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)l
 $('rs').onclick=reset;
 $('clr').onclick=()=>{if(confirm('Clear best times for '+SCENARIOS[KEY].name+'?')){setBest(KEY,[]);renderBest()}};
 load('leonA');
- 
