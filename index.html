@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Electrical Panel – Leon A</title>
+<link rel="stylesheet" href="style.css"></head>
+<body><main>
+<h1>Electrical Panel</h1>
+<nav id="tabs" aria-label="Scenario"></nav>
+<p class="sub" id="sub"></p>
+<div class="hud"><span>Moves <b id="mv">0</b></span><span id="msg">Circuit dead</span></div>
+<svg id="board" viewBox="0 0 940 580" role="img" aria-label="Circuit board puzzle">
+<defs>
+<pattern id="floor" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="#6c6a5c"/><path d="M0 0H40M0 0V40" stroke="#4a483d" stroke-width="2"/></pattern>
+<linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4d3ca"/><stop offset="1" stop-color="#6f6e66"/></linearGradient>
+<linearGradient id="green" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2d6a3a"/><stop offset="1" stop-color="#3f7f4b"/></linearGradient>
+<radialGradient id="shade" cx=".5" cy=".5" r=".7"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="10" y="10" width="920" height="560" rx="18" fill="#2c2b28" stroke="#55534b" stroke-width="3"/>
+<rect x="24" y="24" width="892" height="532" rx="8" fill="url(#floor)"/>
+<rect x="100" y="50" width="130" height="480" fill="url(#green)"/>
+<rect x="710" y="50" width="130" height="480" fill="url(#green)"/>
+<rect x="24" y="24" width="892" height="532" rx="8" fill="url(#shade)"/>
+<rect x="228" y="48" width="484" height="484" rx="6" fill="#17130d"/>
+<g fill="none" stroke-linecap="round">
+<path d="M170 110H110C60 110 40 150 40 230V330" stroke="#8c1d1d" stroke-width="14"/>
+<path d="M170 470H100C60 470 50 510 30 590" stroke="#274f93" stroke-width="14"/>
+<path d="M780 110H850C905 110 905 150 905 210V330" stroke="#6a2f8f" stroke-width="14"/>
+</g>
+<rect x="140" y="80" width="60" height="60" rx="6" fill="url(#metal)" stroke="#333" stroke-width="2"/>
+<rect x="140" y="440" width="60" height="60" rx="6" fill="url(#metal)" stroke="#333" stroke-width="2"/>
+<rect x="745" y="80" width="70" height="60" rx="6" fill="url(#metal)" stroke="#333" stroke-width="2"/>
+<g id="leads"></g><g id="tiles"></g>
+</svg>
+<div class="ctl"><button id="rs">Reset</button></div>
+<p class="tip">Move the selection with W A S D. Press Q to trigger the selected tile.</p>
+</main><script src="script.js"></script></body></html>
