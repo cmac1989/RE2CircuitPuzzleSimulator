@@ -6,9 +6,10 @@ const K={
   str:['WE','NS'],
   cor:['NE','ES','SW','WN'],
   tee:['NS+WS','WE+WN','NS+NE','WE+ES'],   // three edges joined, rotating
-  rot:['WE','NS','WE+NS']                  // WE+NS = two wires crossing, not touching
+  rot:['WE','NS','WE+NS'],                 // WE+NS = two wires crossing, not touching
+  dia:['WN+ES','NE+SW']                    // two separate corner wires split by a diagonal bar
 };
-const FILL={iso:'#6f6c63',cw:'#4b4a3a',diag:'#5c3d2c',rot:'#3d3f43'};
+const FILL={iso:'#6f6c63',cw:'#4b4a3a',diag:'#5c3d2c',rot:'#3d3f43',blue:'#2f3a6b',olive:'#5e5a33'};
 // Scenario cell: R(art, kind, solvedPosition, presses). The start position is worked out
 // by winding back `presses` steps from the solved position, so the board starts exactly
 // as in the game and the listed press counts solve it.
@@ -18,18 +19,25 @@ const LEON_A=[
  [R('cw','str',1),  R('cw','str',1),    R('iso','cor',0,3),R('diag','cor',2,1)],
  [R('diag','cor',1),R('rot','rot',2),   R('rot','tee',3,2),R('iso','cor',3,1)],
  [R('iso','cor',3,1),R('diag','cor',0,1),R('iso','cor',3,1),R('cw','str',1)]];
+// Leon B: output terminal is on the bottom row, solved in 10 presses.
+const LEON_B=[
+ [R('diag','dia',1,1),R('iso','cor',1),    R('diag','dia',0,1),R('iso','cor',2)],
+ [R('cw','str',1),    R('iso','cor',1,1),  R('rot','rot',2),   R('diag','dia',0)],
+ [R('diag','dia',1,1),R('blue','tee',0,3), R('olive','rot',1,1),R('iso','cor',3)],
+ [R('rot','rot',2),   R('iso','cor',3,1),  R('diag','dia',1,1),R('cw','str',0)]];
 const SCENARIOS={
-  leonA:{name:'Leon A',grid:LEON_A},
-  leonB:{name:'Leon B',placeholder:true,grid:LEON_A},
-  claireA:{name:'Claire A',placeholder:true,grid:LEON_A},
-  claireB:{name:'Claire B',placeholder:true,grid:LEON_A}};
+  leonA:{name:'Leon A',grid:LEON_A,out:0},
+  leonB:{name:'Leon B',grid:LEON_B,out:3},
+  claireA:{name:'Claire A',placeholder:true,grid:LEON_A,out:0},
+  claireB:{name:'Claire B',placeholder:true,grid:LEON_A,out:0}};
 const M={N:[60,0],E:[120,60],S:[60,120],W:[0,60]};
-let L,st,cur=[0,0],moves=0;
+let L,st,OUT=0,cur=[0,0],moves=0;
+const outY=()=>OY+OUT*C+60;
 const pos=(r,c)=>K[L[r][c].k];
 const pathOf=([a,b])=>OPP[a]==b?`M${M[a]}L${M[b]}`:`M${M[a]}Q60,60 ${M[b]}`;
 const wire=(d,on)=>`<path class="w0" d="${d}"/><path class="w1 ${on?'on':''}" d="${d}"/><path class="w2" d="${d}"/>`;
 const lamp=(x,y,on)=>`<circle cx="${x}" cy="${y}" r="11" fill="${on?'#ffe27a':'#4a432c'}" stroke="#1d1a12" stroke-width="2" ${on?'filter="url(#glow)"':''}/>`;
-
+ 
 function analyze(){
   const id=(r,c,p)=>(r*N+c)*4+'NESW'.indexOf(p),par=[...Array(N*N*4).keys()];
   const f=x=>par[x]==x?x:par[x]=f(par[x]),u=(a,b)=>{par[f(a)]=f(b)};
@@ -37,17 +45,20 @@ function analyze(){
     pos(r,c)[st[r][c]].split('+').forEach(w=>u(id(r,c,w[0]),id(r,c,w[1])));
     for(const p in D){const nr=r+D[p][1],nc=c+D[p][0];if(nr<N&&nc<N)u(id(r,c,p),id(nr,nc,OPP[p]))}
   }
-  const a=f(id(0,0,'W')),b=f(id(3,0,'W')),o=f(id(0,3,'E'));
+  const a=f(id(0,0,'W')),b=f(id(3,0,'W')),o=f(id(OUT,3,'E'));
   return{f,id,lit:new Set([a,b]),win:a==b&&b==o,outLit:o==a||o==b};
 }
-
+ 
 function tile(r,c,A){
-  const {a}=L[r][c],s=st[r][c],x=OX+c*C,y=OY+r*C,sel=cur[0]==r&&cur[1]==c;
+  const {a,k}=L[r][c],s=st[r][c],x=OX+c*C,y=OY+r*C,sel=cur[0]==r&&cur[1]==c;
   let g=`<g class="tile${sel?' sel':''}" data-r="${r}" data-c="${c}" style="--x:${x}px;--y:${y}px" transform="translate(${x},${y})"><rect class="base" x="4" y="4" width="112" height="112" rx="9" fill="${FILL[a]}"/>${sel?'<rect x="4" y="4" width="112" height="112" rx="9" fill="#6fa8ff" opacity=".2"/>':''}`;
   g+=`<rect x="9" y="9" width="102" height="102" rx="6" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="2"/>`;
   if(a=='iso')g+=`<text class="lbl" x="60" y="45" text-anchor="middle">ISO-F</text><text class="lbl" x="60" y="86" text-anchor="middle">ISO-M</text>`;
   if(a=='cw')g+=`<text class="lbl" x="60" y="108" text-anchor="middle">CW-2</text>`;
-  if(a=='diag')g+=`<path d="M12 4L116 108L108 116L4 12Z" fill="#241711" opacity=".8" transform="${s%2?'translate(120,0) scale(-1,1)':''}"/>`;
+  if(a=='olive')g+=`<text class="lbl" x="60" y="108" text-anchor="middle">CW-2</text><circle cx="60" cy="60" r="24" fill="#8b8a7c" stroke="#3a3922" stroke-width="3"/>`;
+  if(a=='blue')g+=`<circle cx="60" cy="60" r="26" fill="#1d2140" stroke="#6b74a8" stroke-width="3"/><rect x="92" y="92" width="8" height="8" fill="#0d1022"/>`;
+  // diagonal bar: "/" sits between the WN and ES corners, "\" between NE and SW
+  if(a=='diag')g+=`<path d="M12 4L116 108L108 116L4 12Z" fill="#241711" opacity=".8" transform="${(k=='dia'?s+1:s)%2?'translate(120,0) scale(-1,1)':''}"/>`;
   if(a=='rot')g+=`<circle cx="60" cy="60" r="32" fill="#25262a" stroke="#8c8a7c" stroke-width="3"/><line x1="60" y1="60" x2="60" y2="34" stroke="#d6c58a" stroke-width="5" stroke-linecap="round" transform="rotate(${s*90} 60 60)"/>`;
   pos(r,c)[s].split('+').forEach(w=>{
     g+=wire(pathOf(w),A.lit.has(A.f(A.id(r,c,w[0]))));
@@ -55,13 +66,14 @@ function tile(r,c,A){
   });
   return g+'</g>';
 }
-
+ 
 function render(pop){
   const A=analyze();let h='';
   for(let r=0;r<N;r++)for(let c=0;c<N;c++)h+=tile(r,c,A);
   $('tiles').innerHTML=h;
-  $('leads').innerHTML=wire('M170,110H230',1)+wire('M170,470H230',1)+wire('M710,110H780',A.outLit)
-    +lamp(170,110,1)+lamp(170,470,1)+lamp(768,110,A.outLit)+lamp(792,110,A.outLit);
+  const oy=outY();
+  $('leads').innerHTML=wire('M170,110H230',1)+wire('M170,470H230',1)+wire(`M710,${oy}H780`,A.outLit)
+    +lamp(170,110,1)+lamp(170,470,1)+lamp(768,oy,A.outLit)+lamp(792,oy,A.outLit);
   $('mv').textContent=moves;
   $('msg').textContent=A.win?`Circuit restored in ${moves} moves`:A.outLit?'Output powered. Connect both terminals':'Circuit dead';
   $('msg').className=A.win?'ok':'';
@@ -83,12 +95,23 @@ document.addEventListener('keydown',e=>{
   else if(k=='q'){e.preventDefault();if(!e.repeat)step();}
   else if(k=='e'){e.preventDefault();if(!e.repeat)step();}
 });
+// Output terminal + its cable sit on the scenario's output row (wire exits upward from the
+// bottom half of the board, downward from the top half).
+function drawOutput(){
+  const y=outY(),dir=OUT<2?1:-1;
+  $('outstat').innerHTML=
+    `<path d="M780 ${y}H850C905 ${y} 905 ${y+40*dir} 905 ${y+100*dir}V${y+220*dir}" fill="none" stroke="#6a2f8f" stroke-width="14" stroke-linecap="round"/>`
+    +`<rect x="745" y="${y-30}" width="70" height="60" rx="6" fill="url(#metal)" stroke="#333" stroke-width="2"/>`;
+}
 function load(k){
-  L=SCENARIOS[k].grid;cur=[0,0];
-  $('sub').textContent=SCENARIOS[k].placeholder?SCENARIOS[k].name+': placeholder layout (copy of Leon A until the real board is added).':SCENARIOS[k].name+'. Connect both left terminals to the output.';
+  const S=SCENARIOS[k];
+  L=S.grid;OUT=S.out||0;cur=[0,0];
+  $('sub').textContent=S.placeholder?S.name+': placeholder layout (copy of Leon A until the real board is added).':S.name+'. Connect both left terminals to the output.';
   $('tabs').innerHTML=Object.keys(SCENARIOS).map(id=>`<button data-k="${id}" class="${id==k?'on':''}">${SCENARIOS[id].name}</button>`).join('');
+  drawOutput();
   reset();
 }
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)load(b.dataset.k)});
 $('rs').onclick=reset;
 load('leonA');
+ 
