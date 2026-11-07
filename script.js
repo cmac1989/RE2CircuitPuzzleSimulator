@@ -32,6 +32,35 @@ const SCENARIOS={
   claireB:{name:'Claire B',placeholder:true,grid:LEON_A,out:0}};
 const M={N:[60,0],E:[120,60],S:[60,120],W:[0,60]};
 let L,st,OUT=0,cur=[0,0],moves=0;
+// ---- timer + best times ----
+let KEY='leonA',t0=0,raf=0,solved=false,finalMs=0;
+const mem={};
+const fmt=ms=>{const t=Math.floor(ms/10),cs=t%100,s=Math.floor(t/100)%60,m=Math.floor(t/6000);return `${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`};
+const getBest=k=>{try{const v=JSON.parse(localStorage.getItem('re2circuit.best.'+k));if(Array.isArray(v))return v}catch(e){}return mem[k]||[]};
+const setBest=(k,v)=>{mem[k]=v;try{localStorage.setItem('re2circuit.best.'+k,JSON.stringify(v))}catch(e){}};
+const tick=()=>{$('time').textContent=fmt(performance.now()-t0);raf=requestAnimationFrame(tick)};
+const startTimer=()=>{t0=performance.now();raf=requestAnimationFrame(tick)};
+const stopTimer=()=>{cancelAnimationFrame(raf);raf=0};
+function renderBest(hl=-1){
+  const b=getBest(KEY);
+  $('bestTime').textContent=b.length?fmt(b[0].t):'--';
+  $('bsName').textContent=SCENARIOS[KEY].name;
+  $('best').innerHTML=b.length?b.map((e,i)=>`<li class="${i==hl?'new':''}"><span>${fmt(e.t)}</span><em>${e.m} moves</em></li>`).join(''):'<li class="empty">No times yet. Solve the board to set one.</li>';
+}
+function finish(){
+  const t=performance.now()-t0;stopTimer();
+  solved=true;finalMs=t;$('time').textContent=fmt(t);
+  const prev=getBest(KEY),entry={t:Math.round(t),m:moves},all=[...prev,entry].sort((a,b)=>a.t-b.t);
+  const rank=all.indexOf(entry);setBest(KEY,all.slice(0,5));
+  let badge;
+  if(!prev.length)badge='First time on the board';
+  else if(rank==0)badge=`New best! ${((prev[0].t-entry.t)/1000).toFixed(2)}s faster`;
+  else if(rank<5)badge=`#${rank+1} on your best times`;
+  else badge=`Best is ${fmt(prev[0].t)}`;
+  $('win').innerHTML=`<strong>Circuit restored</strong><span class="big">${fmt(t)}</span><span>${moves} moves</span><span class="badge${rank==0?' gold':''}">${badge}</span><small>Press R or Reset to go again</small>`;
+  $('win').hidden=false;$('board').classList.add('solved');
+  renderBest(rank<5?rank:-1);render();
+}
 const outY=()=>OY+OUT*C+60;
 const pos=(r,c)=>K[L[r][c].k];
 const pathOf=([a,b])=>OPP[a]==b?`M${M[a]}L${M[b]}`:`M${M[a]}Q60,60 ${M[b]}`;
@@ -75,23 +104,29 @@ function render(pop){
   $('leads').innerHTML=wire('M170,110H230',1)+wire('M170,470H230',1)+wire(`M710,${oy}H780`,A.outLit)
     +lamp(170,110,1)+lamp(170,470,1)+lamp(768,oy,A.outLit)+lamp(792,oy,A.outLit);
   $('mv').textContent=moves;
-  $('msg').textContent=A.win?`Circuit restored in ${moves} moves`:A.outLit?'Output powered. Connect both terminals':'Circuit dead';
+  $('msg').textContent=A.win?`Circuit restored in ${moves} moves${solved?' in '+fmt(finalMs):''}`:A.outLit?'Output powered. Connect both terminals':'Circuit dead';
   $('msg').className=A.win?'ok':'';
   if(pop)document.querySelector(`.tile[data-r="${pop[0]}"][data-c="${pop[1]}"]`)?.classList.add('pop');
 }
 function step(){
+  if(solved)return;
+  if(!t0)startTimer();
   const [r,c]=cur;
   st[r][c]=(st[r][c]+1)%pos(r,c).length;moves++;render(cur);
+  if(analyze().win)finish();
 }
 function reset(){
   st=L.map((row,r)=>row.map((t,c)=>{const n=K[t.k].length;return((t.s-t.p)%n+n)%n}));
-  moves=0;render();
+  cur=[0,0];moves=0;stopTimer();t0=0;solved=false;finalMs=0;
+  $('time').textContent=fmt(0);$('win').hidden=true;$('board').classList.remove('solved');
+  renderBest();render();
 }
 const clamp=v=>Math.max(0,Math.min(N-1,v));
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey)return;
   const k=e.key.toLowerCase(),m={w:[-1,0],s:[1,0],a:[0,-1],d:[0,1]}[k];
   if(m){e.preventDefault();cur=[clamp(cur[0]+m[0]),clamp(cur[1]+m[1])];render();}
+  else if(k=='r'){e.preventDefault();reset();}
   else if(k=='q'){e.preventDefault();if(!e.repeat)step();}
   else if(k=='e'){e.preventDefault();if(!e.repeat)step();}
 });
@@ -105,7 +140,7 @@ function drawOutput(){
 }
 function load(k){
   const S=SCENARIOS[k];
-  L=S.grid;OUT=S.out||0;cur=[0,0];
+  KEY=k;L=S.grid;OUT=S.out||0;cur=[0,0];
   $('sub').textContent=S.placeholder?S.name+': placeholder layout (copy of Leon A until the real board is added).':S.name+'. Connect both left terminals to the output.';
   $('tabs').innerHTML=Object.keys(SCENARIOS).map(id=>`<button data-k="${id}" class="${id==k?'on':''}">${SCENARIOS[id].name}</button>`).join('');
   drawOutput();
@@ -113,5 +148,6 @@ function load(k){
 }
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)load(b.dataset.k)});
 $('rs').onclick=reset;
+$('clr').onclick=()=>{if(confirm('Clear best times for '+SCENARIOS[KEY].name+'?')){setBest(KEY,[]);renderBest()}};
 load('leonA');
  
