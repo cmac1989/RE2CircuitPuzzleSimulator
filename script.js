@@ -95,7 +95,7 @@ function analyze(){
 
 function tile(r,c,A){
   const {a,k}=L[r][c],s=st[r][c],x=OX+c*C,y=OY+r*C,sel=cur[0]==r&&cur[1]==c;
-  let g=`<g class="tile${sel?' sel':''}" data-r="${r}" data-c="${c}" style="--x:${x}px;--y:${y}px" transform="translate(${x},${y})"><rect class="base" x="4" y="4" width="112" height="112" rx="9" fill="${FILL[a]}"/>${sel?'<rect x="4" y="4" width="112" height="112" rx="9" fill="#6fa8ff" opacity=".2"/>':''}`;
+  let g=`<g class="tile${sel?' sel':''}" data-r="${r}" data-c="${c}" style="--x:${x}px;--y:${y}px" transform="translate(${x},${y})"><rect class="base" x="4" y="4" width="112" height="112" rx="9" fill="${FILL[a]}"/>${sel?'<rect x="4" y="4" width="112" height="112" rx="9" fill="#ffe27a" opacity=".12"/>':''}`;
   g+=`<rect x="9" y="9" width="102" height="102" rx="6" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="2"/>`;
   if(a=='iso')g+=`<text class="lbl" x="60" y="45" text-anchor="middle">ISO-F</text><text class="lbl" x="60" y="86" text-anchor="middle">ISO-M</text>`;
   if(a=='cw')g+=`<text class="lbl" x="60" y="108" text-anchor="middle">CW-2</text>`;
@@ -148,16 +148,17 @@ document.addEventListener('keydown',e=>{
 // Output terminal + its cable sit on the scenario's output row (wire exits upward from the
 // bottom half of the board, downward from the top half).
 function drawOutput(){
-  const y=outY(),dir=OUT<2?1:-1;
-  $('outstat').innerHTML=
-    `<path d="M780 ${y}H850C905 ${y} 905 ${y+40*dir} 905 ${y+100*dir}V${y+220*dir}" fill="none" stroke="#6a2f8f" stroke-width="14" stroke-linecap="round"/>`
-    +`<rect x="745" y="${y-30}" width="70" height="60" rx="6" fill="url(#metal)" stroke="#333" stroke-width="2"/>`;
+  const y=outY();
+  $('outstat').innerHTML=`<rect class="term" x="745" y="${y-30}" width="70" height="60" rx="10"/>`;
 }
 function load(k){
   const S=SCENARIOS[k];
   KEY=k;L=S.grid;OUT=S.out||0;cur=[0,0];
   $('sub').textContent=S.placeholder?S.name+': placeholder layout (copy of Leon A until the real board is added).':S.name+'. Connect both left terminals to the output.'+(S.note?' '+S.note:'');
-  $('tabs').innerHTML=Object.keys(SCENARIOS).map(id=>`<button data-k="${id}" class="${id==k?'on':''}">${SCENARIOS[id].name}</button>`).join('');
+  $('tabs').innerHTML=Object.keys(SCENARIOS).map(id=>`<button data-k="${id}" class="${id==k?'on':''}" aria-pressed="${id==k}">${SCENARIOS[id].name}</button>`).join('');
+  const par=L.reduce((a,row)=>a+row.reduce((b,t)=>b+t.p,0),0);
+  $('par').textContent=par;$('chipPar').textContent=par+' presses';
+  $('chipOut').textContent=OUT==0?'top right':OUT==N-1?'bottom right':'row '+(OUT+1)+' right';
   drawOutput();
   reset();
 }
