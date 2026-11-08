@@ -139,11 +139,44 @@ function reset(){
 const clamp=v=>Math.max(0,Math.min(N-1,v));
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey)return;
-  const k=e.key.toLowerCase(),m={w:[-1,0],arrowup:[-1,0],s:[1,0],arrowdown:[1,0],a:[0,-1],arrowleft:[0,-1],d:[0,1],arrowright:[0,1]}[k] || {Up:[-1,0],Down:[1,0],Left:[0,-1],Right:[0,1]}[k];
-  if(m){e.preventDefault();cur=[clamp(cur[0]+m[0]),clamp(cur[1]+m[1])];render();}
-  else if(k=='r'){e.preventDefault();reset();}
-  else if(k=='q'){e.preventDefault();if(!e.repeat)step();}
-  else if(k=='e'){e.preventDefault();if(!e.repeat)step();}
+
+  const k=e.key.toLowerCase();
+  const m={
+    w:[-1,0], arrowup:[-1,0],
+    s:[1,0], arrowdown:[1,0]
+  }[k];
+
+  if(m){
+    e.preventDefault();
+    cur=[clamp(cur[0]+m[0]),clamp(cur[1]+m[1])];
+    render();
+  }
+  else if(k==='arrowright' || k==='d'){
+    e.preventDefault();
+    cur[1]++;
+    if(cur[1]>=N){
+      cur[1]=0;
+      cur[0]=(cur[0]+1)%N;
+    }
+    render();
+  }
+  else if(k==='arrowleft' || k==='a'){
+    e.preventDefault();
+    cur[1]--;
+    if(cur[1]<0){
+      cur[1]=N-1;
+      cur[0]=(cur[0]-1+N)%N;
+    }
+    render();
+  }
+  else if(k==='r'){
+    e.preventDefault();
+    reset();
+  }
+  else if(k==='q'||k==='e'){
+    e.preventDefault();
+    if(!e.repeat)step();
+  }
 });
 // Output terminal + its cable sit on the scenario's output row (wire exits upward from the
 // bottom half of the board, downward from the top half).
